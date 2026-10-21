@@ -17,7 +17,15 @@ pdfcraft-edit = { workspace = true }
 pdfcraft-create = { workspace = true }
 pdfcraft-export = { workspace = true }
 thiserror = { workspace = true }
+# Text recognition for scanned pages: off by default (the models are separate files, and wasm
+# builds leave it out).
+pdfcraft-ocr = { workspace = true, optional = true }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"], optional = true }
+
+[features]
+ocr = ["dep:pdfcraft-ocr", "dep:image"]
 
 [dev-dependencies]
+pdfcraft-cos = { workspace = true }
 pdfcraft-testkit = { workspace = true }
 flate2 = { workspace = true }

@@ -56,6 +56,8 @@ pub struct Converted {
     /// Converted pages (0-based) with pictures but no text: scans, whose words only text
     /// recognition can recover.
     pub image_only_pages: Vec<usize>,
+    /// Pages (0-based) whose text was recognised from their picture ([`convert_with_ocr`]).
+    pub ocr_pages: Vec<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -358,7 +360,25 @@ pub fn convert(bytes: &[u8], target: Target, opts: &Options) -> Result<Converted
     }
     // The last-resort guard (AGENTS.md §4): a bug on one hostile file is an error, not a crash
     // of the app that asked.
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| convert_unguarded(bytes, target, opts))).unwrap_or_else(|p| {
+    guarded(|| convert_unguarded(bytes, target, opts, None))
+}
+
+/// [`convert`], with the words of scanned pages (pictures without text) recognised by `ocr` and
+/// set as text in place of the picture. Pages it reads nothing on stay pictures.
+#[cfg(feature = "ocr")]
+pub fn convert_with_ocr(bytes: &[u8], target: Target, opts: &Options, ocr: &pdfcraft_ocr::Ocr) -> Result<Converted, Error> {
+    if bytes.len() > MAX_INPUT_BYTES {
+        return Err(Error::TooLarge);
+    }
+    if !is_pdf(bytes) {
+        return Err(Error::NotPdf);
+    }
+    guarded(|| convert_unguarded(bytes, target, opts, Some(&|im: &pdfcraft_export::Image| ocr::recognize(ocr, im))))
+}
+
+/// Run `f`, turning a panic into [`Error::Damaged`].
+fn guarded(f: impl FnOnce() -> Result<Converted, Error>) -> Result<Converted, Error> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)).unwrap_or_else(|p| {
         let why = p.downcast_ref::<&str>().map(|s| (*s).to_string()).or_else(|| p.downcast_ref::<String>().cloned());
         Err(Error::Damaged(why.unwrap_or_else(|| "unknown error".into())))
     })
@@ -384,7 +404,10 @@ fn open(bytes: &[u8], password: Option<&str>) -> Result<pdfcraft_cos::Document, 
     })
 }
 
-fn convert_unguarded(bytes: &[u8], target: Target, opts: &Options) -> Result<Converted, Error> {
+/// Recognises a scan's words: the picture in, its text as blocks on the page out.
+type Recognize<'a> = &'a dyn Fn(&pdfcraft_export::Image) -> Vec<pdfcraft_export::Block>;
+
+fn convert_unguarded(bytes: &[u8], target: Target, opts: &Options, recognize: Option<Recognize>) -> Result<Converted, Error> {
     let cos = open(bytes, opts.password.as_deref())?;
     let boxes = page_boxes(&cos);
     let page_count = boxes.len();
@@ -405,9 +428,26 @@ fn convert_unguarded(bytes: &[u8], target: Target, opts: &Options) -> Result<Con
         truncated_pages.dedup();
     }
     let indices: Vec<usize> = opts.pages.clone().unwrap_or_else(|| (0..page_count).collect());
+    let mut ocr_pages = Vec::new();
+    if let Some(recognize) = recognize {
+        for (page, &i) in pages.iter_mut().zip(&indices) {
+            if !page.blocks.is_empty() {
+                continue;
+            }
+            // The scan is the page's biggest picture.
+            let area = |im: &pdfcraft_export::Image| (im.rect[2] - im.rect[0]).abs() * (im.rect[3] - im.rect[1]).abs();
+            let Some(at) = page.images.iter().enumerate().max_by(|(_, a), (_, b)| area(a).total_cmp(&area(b))).map(|(at, _)| at) else { continue };
+            let blocks = page.images.get(at).map(recognize).unwrap_or_default();
+            if !blocks.is_empty() {
+                page.images.remove(at);
+                page.blocks = blocks;
+                ocr_pages.push(i);
+            }
+        }
+    }
     let image_only_pages = pages.iter().zip(&indices).filter(|(p, _)| p.blocks.is_empty() && !p.images.is_empty()).map(|(_, &i)| i).collect();
     let title = opts.title.clone().or_else(|| info_title(&cos)).unwrap_or_default();
-    Ok(Converted { bytes: write(&pages, target, &title), page_count, truncated_pages, image_only_pages })
+    Ok(Converted { bytes: write(&pages, target, &title), page_count, truncated_pages, image_only_pages, ocr_pages })
 }
 
 /// The document's `/Info` `/Title`, when it has a non-empty one.
@@ -416,6 +456,9 @@ fn info_title(cos: &pdfcraft_cos::Document) -> Option<String> {
     let title = cos.resolve(info.as_dict()?.get(b"Title")?);
     Some(title.as_string()?.to_text()).filter(|t| !t.trim().is_empty())
 }
+
+#[cfg(feature = "ocr")]
+mod ocr;
 
 #[cfg(test)]
 mod tests;

@@ -18,3 +18,14 @@ let out = pdfcraft_office::convert(&bytes, Target::Docx, &Options { pages: Some(
   parsing), `BadPageRange`, `Damaged`. A page that can't be read loses its text or images; the rest
   of the file still converts. The whole conversion runs under a last-resort panic guard.
 - `parse_page_range("1-3, 5", count)` reads page ranges as people type them.
+
+## Scanned pages (feature `ocr`)
+
+With the `ocr` feature, `convert_with_ocr(&bytes, target, &opts, &ocr)` reads the words of pages
+that are pictures without text (scans) with `pdfcraft-ocr` and sets them as text in place of the
+picture: lines at a line pitch become a paragraph, and each paragraph's type size comes from its
+word boxes. `Converted::ocr_pages` lists the pages read this way; `image_only_pages` keeps the
+scans it couldn't read. The picture itself is decoded (JPEG or PNG, at most 60 megapixels), so no
+renderer is needed. The models are separate files (`pdfcraft_ocr::Models`; `cargo xtask models`
+in a source tree) and read the Latin alphabet without accents; the feature is off by default and
+in wasm builds.

@@ -4227,11 +4227,13 @@ name = "pdfcraft-office"
 version = "0.10.1"
 dependencies = [
  "flate2",
+ "image",
  "pdfcraft-cos",
  "pdfcraft-create",
  "pdfcraft-edit",
  "pdfcraft-export",
  "pdfcraft-model",
+ "pdfcraft-ocr",
  "pdfcraft-testkit",
  "thiserror 2.0.21",
 ]

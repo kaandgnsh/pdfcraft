@@ -4,7 +4,7 @@
 
 Every asset PdfCraft includes, bundles or uses to build its published material, with its author, source and licence. The policy is in [AGENTS.md](AGENTS.md) §1. The machine-readable list, with SHA-256 hashes, is [ATTRIBUTION.toml](ATTRIBUTION.toml). Licence texts are kept beside the assets and summarised in [NOTICE](NOTICE).
 
-## In this repository (285)
+## In this repository (286)
 
 | Asset | Title | Author | Licence | Source | Used for |
 |---|---|---|---|---|---|
@@ -293,6 +293,7 @@ Every asset PdfCraft includes, bundles or uses to build its published material, 
 | `crates/office/tests/corpus/styled.pdf` | Fidelity corpus: centred, right-aligned and italic paragraphs in Liberation Serif, Sans and Mono | PdfCraft contributors | MIT OR Apache-2.0 | Contributor-original text (crates/office/tests/corpus/src/styled.html), made into a PDF by WordCraft 0.8.0 (see crates/office/tests/corpus/make.sh); embeds subsets of the Liberation fonts (OFL-1.1) | Conversion fidelity measurement (crates/office/tests/fidelity.rs) |
 | `crates/office/tests/corpus/table.pdf` | Fidelity corpus: a paragraph, a four-row table and a closing line | PdfCraft contributors | MIT OR Apache-2.0 | Contributor-original text (crates/office/tests/corpus/src/table.md), made into a PDF by WordCraft 0.8.0 (see crates/office/tests/corpus/make.sh); embeds subsets of the Liberation fonts (OFL-1.1) | Conversion fidelity measurement (crates/office/tests/fidelity.rs) |
 | `crates/office/tests/corpus/turkish.pdf` | Fidelity corpus: Turkish text (ğ, ş, ı, İ, ö, ü, ç) under headings | PdfCraft contributors | MIT OR Apache-2.0 | Contributor-original text (crates/office/tests/corpus/src/turkish.md), made into a PDF by WordCraft 0.8.0 (see crates/office/tests/corpus/make.sh); embeds subsets of the Liberation fonts (OFL-1.1) | Conversion fidelity measurement (crates/office/tests/fidelity.rs) |
+| `crates/office/tests/data/scan.jpg` | A scanned page: a heading and two sentences (greyscale JPEG) | PdfCraft contributors | MIT OR Apache-2.0 | Contributor-original text, rendered as a page by WordCraft 0.8.0 (wordcraft-cli render, 2 px per point) and saved as a greyscale JPEG; shows the Liberation Sans font (OFL-1.1) as pixels only | Text recognition of scanned pages (crates/office/tests/ocr.rs) |
 
 ## Compiled in through dependencies (6)
 
